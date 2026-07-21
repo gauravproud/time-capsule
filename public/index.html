@@ -89,6 +89,22 @@
   @keyframes rise{ from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;} }
   @keyframes breathe{ 0%,100%{box-shadow:0 0 40px -6px rgba(232,180,74,.30);} 50%{box-shadow:0 0 60px 0 rgba(232,180,74,.55);} }
   @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
+
+  .site-footer{
+    text-align: center;
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 14px;
+    background: transparent;
+  }
+  .site-footer a{
+    color: var(--gold);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .site-footer a:hover{ color: var(--gold-soft); }
 </style>
 </head>
 
@@ -135,6 +151,11 @@
   </section>
 
   <div id="loading" class="center" style="display:none">Opening capsule…</div>
+
+  <footer class="site-footer">
+      Made with ♥ by Gaurav ·
+      <a href="https://github.com/gauravproud/time-capsule" target="_blank" rel="noopener">GitHub</a>
+    </footer>
 
 </div>
 
@@ -330,9 +351,5 @@ function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&l
 window.addEventListener("popstate", route);   // browser back/forward
 route();
 </script>
-  <footer style="background:#000000; color:white; padding:10px 20px;">
-  <p> Made with <3 by Gaurav</p>
-  <p><a href="https://github.com/gauravproud">Github</a></p>  
-</footer>
 </body>
 </html>
