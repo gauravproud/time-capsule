@@ -1,0 +1,8 @@
+{
+  "name": "time-capsule-netlify",
+  "version": "1.0.0",
+  "description": "Time capsule on Netlify: static frontend + serverless function + Firestore.",
+  "dependencies": {
+    "firebase-admin": "^14.1.0"
+  }
+}

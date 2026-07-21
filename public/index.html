@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Time Capsule — seal a message for the future</title>
+
+<!--
+  TIME CAPSULE — Option B frontend
+  --------------------------------
+  Difference from Option A, in one line:
+    Option A packed the message into the link.
+    Option B sends the message to the server and only puts the capsule
+    ID in the link. The message is fetched from the server, and the
+    server withholds it until the reveal time.
+
+  Follow the CAPITALISED banners in the <script> to trace the flow.
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --night:#0d1030; --night-2:#141838; --night-3:#1d2350; --line:#2b3168;
+    --ink:#ecebff; --muted:#9498c8; --gold:#e8b44a; --gold-soft:#f0cd86;
+    --violet:#7b6cf6; --danger:#ff8f8f; --r:18px; --maxw:560px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; }
+  body{
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #1a1f52 0%, transparent 60%),
+      radial-gradient(800px 500px at 90% 110%, #241a52 0%, transparent 55%),
+      var(--night);
+    color:var(--ink); font-family:"Inter",system-ui,-apple-system,sans-serif;
+    line-height:1.5; display:flex; justify-content:center; padding:32px 20px 64px;
+  }
+  .wrap{ width:100%; max-width:var(--maxw); }
+  .eyebrow{ font-size:12px; letter-spacing:.22em; text-transform:uppercase; color:var(--gold); font-weight:600; margin:0 0 10px; }
+  h1{ font-family:"Fraunces",Georgia,serif; font-weight:900; font-size:clamp(30px,7vw,46px); line-height:1.02; letter-spacing:-.01em; margin:0 0 12px; }
+  .lede{ color:var(--muted); font-size:16px; margin:0 0 28px; max-width:46ch; }
+  .card{ background:linear-gradient(180deg,var(--night-2),#10142f); border:1px solid var(--line); border-radius:var(--r); padding:24px; box-shadow:0 30px 70px -30px rgba(0,0,0,.7); }
+  label{ display:block; font-size:13px; font-weight:600; color:var(--muted); margin:0 0 7px; }
+  .field{ margin-bottom:18px; }
+  .row{ display:flex; gap:12px; }
+  .row .field{ flex:1; }
+  textarea,input{ width:100%; color:var(--ink); background:var(--night-3); border:1px solid var(--line); border-radius:12px; padding:12px 14px; font:inherit; font-size:15px; transition:border-color .15s, box-shadow .15s; }
+  textarea{ min-height:130px; resize:vertical; }
+  input::placeholder, textarea::placeholder{ color:#6d72a3; }
+  textarea:focus, input:focus{ outline:none; border-color:var(--violet); box-shadow:0 0 0 3px rgba(123,108,246,.25); }
+  input[type="datetime-local"]{ color-scheme:dark; }
+  .hint{ font-size:12.5px; color:#6d72a3; margin-top:6px; }
+  .err{ color:var(--danger); font-size:13px; margin-top:10px; min-height:18px; }
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%; cursor:pointer; font:inherit; font-weight:600; font-size:15px; padding:13px 18px; border-radius:12px; border:1px solid transparent; background:linear-gradient(180deg,var(--gold-soft),var(--gold)); color:#3a2606; transition:transform .08s ease, filter .15s; }
+  .btn:hover{ filter:brightness(1.05); } .btn:active{ transform:translateY(1px); }
+  .btn[disabled]{ opacity:.55; cursor:default; }
+  .btn.ghost{ background:transparent; color:var(--ink); border-color:var(--line); }
+  .btn.ghost:hover{ background:var(--night-3); filter:none; }
+  .result{ margin-top:22px; display:none; }
+  .result.show{ display:block; animation:rise .5s ease both; }
+  .linkbox{ display:flex; gap:8px; align-items:stretch; margin:8px 0 14px; }
+  .linkbox input{ font-size:13px; color:var(--gold-soft); }
+  .copy{ flex:0 0 auto; padding:0 16px; border-radius:12px; cursor:pointer; background:var(--night-3); color:var(--ink); border:1px solid var(--line); font:inherit; font-weight:600; font-size:13px; }
+  .copy:hover{ border-color:var(--violet); }
+  #reveal{ display:none; text-align:center; }
+  .meta{ color:var(--muted); font-size:15px; margin:0 0 26px; } .meta b{ color:var(--ink); font-weight:600; }
+  .seal{ position:relative; width:220px; height:220px; margin:6px auto 26px; }
+  .seal svg{ transform:rotate(-90deg); }
+  .track{ fill:none; stroke:var(--line); stroke-width:10; }
+  .prog{ fill:none; stroke:url(#grad); stroke-width:10; stroke-linecap:round; transition:stroke-dashoffset 1s linear; }
+  .core{ position:absolute; inset:26px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 35%, #201a3d, #12102a); border:1px solid var(--line); }
+  .locked .core{ box-shadow:0 0 40px -6px rgba(232,180,74,.35); animation:breathe 3.4s ease-in-out infinite; }
+  .core .lock{ font-size:26px; color:var(--gold); }
+  .core .pct{ font-size:12px; color:var(--muted); letter-spacing:.12em; margin-top:2px; }
+  .clock{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:0 auto 28px; max-width:420px; }
+  .cell{ background:var(--night-2); border:1px solid var(--line); border-radius:14px; padding:14px 6px; }
+  .cell .n{ font-family:"Fraunces",serif; font-weight:600; font-size:clamp(26px,7vw,38px); font-variant-numeric:tabular-nums; line-height:1; }
+  .cell .l{ font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-top:8px; }
+  .message{ display:none; }
+  .message.show{ display:block; animation:rise .7s ease both; }
+  .message .body{ font-family:"Fraunces",Georgia,serif; font-size:21px; line-height:1.55; white-space:pre-wrap; text-align:left; background:var(--night-2); border:1px solid var(--line); border-radius:var(--r); padding:26px 24px; box-shadow:0 0 60px -20px rgba(232,180,74,.35); }
+  .opened-tag{ display:inline-block; font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); margin-bottom:14px; }
+  .footer-link{ margin-top:30px; }
+  a.plain{ color:var(--muted); text-decoration:none; border-bottom:1px solid var(--line); cursor:pointer; }
+  a.plain:hover{ color:var(--ink); }
+  .center{ text-align:center; color:var(--muted); padding:40px 0; }
+  @keyframes rise{ from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;} }
+  @keyframes breathe{ 0%,100%{box-shadow:0 0 40px -6px rgba(232,180,74,.30);} 50%{box-shadow:0 0 60px 0 rgba(232,180,74,.55);} }
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <!-- ============ CREATE VIEW ============ -->
+  <section id="create">
+    <p class="eyebrow">A message for later</p>
+    <h1>Seal a moment.<br>Open it in the future.</h1>
+    <p class="lede">Write something, lock it to a date, and share the link. The message stays safe on the server and only opens when the day arrives.</p>
+
+    <div class="card">
+      <div class="field">
+        <label for="msg">Your message</label>
+        <textarea id="msg" placeholder="Dear future me…"></textarea>
+      </div>
+      <div class="row">
+        <div class="field"><label for="to">To (optional)</label><input id="to" type="text" placeholder="e.g. Mom" maxlength="60"></div>
+        <div class="field"><label for="from">From (optional)</label><input id="from" type="text" placeholder="e.g. Tuco" maxlength="60"></div>
+      </div>
+      <div class="field">
+        <label for="date">Reveal on</label>
+        <input id="date" type="datetime-local">
+        <p class="hint">The capsule unlocks at this moment. Pick anything in the future.</p>
+      </div>
+      <button class="btn" id="seal">🔒 Seal the capsule</button>
+      <p class="err" id="err"></p>
+
+      <div class="result" id="result">
+        <label>Shareable link</label>
+        <div class="linkbox">
+          <input id="link" type="text" readonly>
+          <button class="copy" id="copy">Copy</button>
+        </div>
+        <button class="btn ghost" id="preview">Open the capsule →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ REVEAL VIEW ============ -->
+  <section id="reveal">
+    <div id="rev-content"><!-- filled by JS --></div>
+  </section>
+
+  <div id="loading" class="center" style="display:none">Opening capsule…</div>
+
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let ticker = null;
+const API = "/api/capsules";
+
+/* =====================================================================
+   ROUTING — the path decides the screen
+   ---------------------------------------------------------------------
+   "/"        -> create screen
+   "/c/:id"   -> fetch that capsule from the server and show it          */
+function route(){
+  const m = location.pathname.match(/^\/c\/(.+)$/);
+  if(m){ openCapsule(m[1]); }
+  else { showCreate(); }
+}
+
+function showCreate(){
+  if(ticker) clearInterval(ticker);
+  $("reveal").style.display = "none";
+  $("loading").style.display = "none";
+  $("create").style.display = "block";
+}
+
+/* =====================================================================
+   SEAL — POST the message to the server, get back an id
+   ---------------------------------------------------------------------
+   Notice: the message leaves the browser (to the server) but does NOT
+   come back. The browser only learns the capsule's id.                  */
+(function setDefaultDate(){
+  const d = new Date(Date.now() + 7*24*60*60*1000);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  $("date").value = d.toISOString().slice(0,16);
+  $("date").min   = new Date().toISOString().slice(0,16);
+})();
+
+$("seal").addEventListener("click", async () => {
+  const message = $("msg").value.trim();
+  const when    = $("date").value;
+  const err     = $("err");
+  err.textContent = "";
+
+  if(!message){ err.textContent = "Write a message first."; return; }
+  if(!when){ err.textContent = "Pick a reveal date."; return; }
+  const reveal = new Date(when).getTime();
+  if(reveal <= Date.now()){ err.textContent = "The reveal date needs to be in the future."; return; }
+
+  $("seal").disabled = true; $("seal").textContent = "Sealing…";
+  try{
+    const res = await fetch(API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, to: $("to").value, from: $("from").value, reveal })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || "Something went wrong.");
+
+    // Build the shareable link from the id the server returned.
+    const url = location.origin + "/c/" + data.id;
+    $("link").value = url;
+    $("result").classList.add("show");
+    $("preview").onclick = () => { history.pushState({}, "", "/c/" + data.id); openCapsule(data.id); };
+  }catch(e){
+    err.textContent = e.message;
+  }finally{
+    $("seal").disabled = false; $("seal").textContent = "🔒 Seal the capsule";
+  }
+});
+
+$("copy").addEventListener("click", async () => {
+  try{ await navigator.clipboard.writeText($("link").value); $("copy").textContent = "Copied!"; }
+  catch(e){ $("link").select(); $("copy").textContent = "Select + copy"; }
+  setTimeout(() => $("copy").textContent = "Copy", 1600);
+});
+
+/* =====================================================================
+   OPEN — fetch the capsule from the server and render it
+   ---------------------------------------------------------------------
+   The server sends { locked, to, from, reveal_at, created_at } and only
+   includes `message` when locked === false. So while locked, this page
+   simply DOES NOT HAVE the text to show — that's the real lock.          */
+async function openCapsule(id){
+  $("create").style.display = "none";
+  $("reveal").style.display = "none";
+  $("loading").style.display = "block";
+
+  let cap;
+  try{
+    const res = await fetch(API + "/" + id);
+    cap = await res.json();
+    if(!res.ok) throw new Error(cap.error || "Not found");
+  }catch(e){
+    $("loading").innerHTML = "This capsule couldn't be found.";
+    return;
+  }
+
+  $("loading").style.display = "none";
+  $("reveal").style.display = "block";
+  renderReveal(id, cap);
+}
+
+const RING = 2 * Math.PI * 100;
+
+function renderReveal(id, cap){
+  const to   = cap.to   ? `For <b>${escapeHtml(cap.to)}</b>` : "";
+  const from = cap.from ? `from <b>${escapeHtml(cap.from)}</b>` : "";
+  const revealDate = new Date(cap.reveal_at);
+
+  $("rev-content").innerHTML = `
+    <p class="eyebrow">${cap.locked ? "Sealed capsule" : "Opened capsule"}</p>
+    <p class="meta">${[to,from].filter(Boolean).join(" ") || "A sealed message."}</p>
+    <div class="seal ${cap.locked ? "locked" : ""}" id="seal-vis">
+      <svg width="220" height="220" viewBox="0 0 220 220">
+        <defs><linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#7b6cf6"/><stop offset="100%" stop-color="#e8b44a"/>
+        </linearGradient></defs>
+        <circle class="track" cx="110" cy="110" r="100"></circle>
+        <circle class="prog"  cx="110" cy="110" r="100" id="prog"
+                style="stroke-dasharray:${RING}"></circle>
+      </svg>
+      <div class="core"><div class="lock" id="core-icon">🔒</div><div class="pct" id="core-pct"></div></div>
+    </div>
+    <div class="clock" id="clock">
+      <div class="cell"><div class="n" id="d">0</div><div class="l">Days</div></div>
+      <div class="cell"><div class="n" id="h">0</div><div class="l">Hours</div></div>
+      <div class="cell"><div class="n" id="m">0</div><div class="l">Minutes</div></div>
+      <div class="cell"><div class="n" id="s">0</div><div class="l">Seconds</div></div>
+    </div>
+    <div class="message" id="message">
+      <span class="opened-tag">✦ Opened</span>
+      <div class="body" id="msg-body"></div>
+    </div>
+    <p class="meta" style="margin-top:24px">Unlocks ${revealDate.toLocaleString(undefined,{dateStyle:"long",timeStyle:"short"})}</p>
+    <p class="footer-link"><a class="plain" id="make-own">Create your own capsule</a></p>`;
+
+  // This button does a real navigation, so it can never get "stuck".
+  $("make-own").onclick = () => { history.pushState({}, "", "/"); showCreate(); };
+
+  if(cap.locked){ startCountdown(id, cap); }
+  else { reveal(cap.message); }
+}
+
+function startCountdown(id, cap){
+  if(ticker) clearInterval(ticker);
+  const step = () => {
+    const left = cap.reveal_at - Date.now();
+    if(left <= 0){
+      clearInterval(ticker);
+      // IMPORTANT: while locked we never received the message, so we
+      // must ask the server again now that it's unlocked.
+      refetchAndReveal(id);
+      return;
+    }
+    const sec = Math.floor(left/1000);
+    $("d").textContent = Math.floor(sec/86400);
+    $("h").textContent = pad(Math.floor(sec%86400/3600));
+    $("m").textContent = pad(Math.floor(sec%3600/60));
+    $("s").textContent = pad(sec%60);
+    const frac = clamp((Date.now()-cap.created_at)/(cap.reveal_at-cap.created_at));
+    $("prog").style.strokeDashoffset = RING*(1-frac);
+    $("core-pct").textContent = Math.round(frac*100)+"%";
+  };
+  step();
+  ticker = setInterval(step, 1000);
+}
+
+async function refetchAndReveal(id){
+  try{
+    const res = await fetch(API + "/" + id);
+    const cap = await res.json();
+    if(cap.message != null) reveal(cap.message);
+  }catch(e){ /* leave the seal as-is if the network hiccups */ }
+}
+
+function reveal(text){
+  const seal = $("seal-vis");
+  if(seal){ seal.classList.remove("locked"); }
+  const clock = $("clock"); if(clock) clock.style.display = "none";
+  const icon = $("core-icon"); if(icon) icon.textContent = "✦";
+  const pct  = $("core-pct");  if(pct)  pct.textContent = "Open";
+  const prog = $("prog"); if(prog) prog.style.strokeDashoffset = 0;
+  $("msg-body").textContent = text;          // textContent = safe from HTML injection
+  $("message").classList.add("show");
+}
+
+/* helpers */
+const pad = n => String(n).padStart(2,"0");
+const clamp = x => Math.min(Math.max(x,0),1);
+function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+window.addEventListener("popstate", route);   // browser back/forward
+route();
+</script>
+</body>
+</html>

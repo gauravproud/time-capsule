@@ -1,0 +1,32 @@
+# =====================================================================
+# Netlify configuration
+# =====================================================================
+
+[build]
+  publish   = "public"              # the static site lives in /public
+  functions = "netlify/functions"   # serverless functions live here
+
+[functions]
+  node_bundler = "esbuild"          # bundles firebase-admin into the function
+
+# --- Redirects (order matters: specific rules first) ---------------
+# These let the frontend keep calling clean URLs like /api/capsules,
+# while Netlify quietly routes them to the function.
+
+# open a specific capsule:  GET /api/capsules/<id>
+[[redirects]]
+  from   = "/api/capsules/*"
+  to     = "/.netlify/functions/capsules/:splat"
+  status = 200
+
+# seal a new capsule:       POST /api/capsules
+[[redirects]]
+  from   = "/api/capsules"
+  to     = "/.netlify/functions/capsules"
+  status = 200
+
+# capsule links /c/<id> should load the app (which reads the id itself)
+[[redirects]]
+  from   = "/c/*"
+  to     = "/index.html"
+  status = 200
